@@ -3,6 +3,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  ILike,
   JoinTable,
   ManyToMany,
   ManyToOne,
@@ -14,6 +15,7 @@ import Category from "./category";
 import Tag from "./tag";
 import { CreateOrUpdateAd } from "./ad.args";
 import User from "./user";
+import { getCache } from "../cache";
 
 type AdArgs = CreateOrUpdateAd & {
   owner: User;
@@ -41,6 +43,9 @@ class Ad extends BaseEntity {
   @Column()
   @Field(() => Float)
   price!: number;
+
+  @Column({ type: "int" })
+  weightGrams!: number;
 
   @Column({ default: "" })
   @Field()
@@ -71,6 +76,7 @@ class Ad extends BaseEntity {
       this.owner = ad.owner;
       this.description = ad.description;
       this.price = ad.price;
+      this.weightGrams = ad.weightGrams;
       this.picture = ad.picture;
       this.location = ad.location;
     }
@@ -78,16 +84,14 @@ class Ad extends BaseEntity {
 
   static async saveNewAd(adData: AdArgs): Promise<Ad> {
     const newAd = new Ad(adData);
-    if (adData.categoryId) {
-      const category = await Category.getCategoryById(adData.categoryId);
-      newAd.category = category;
-    }
-    if (adData.tagIds) {
-      // Promise.all will call each function in array passed as argument and resolve when all are resolved
-      newAd.tags = await Promise.all(adData.tagIds.map(Tag.getTagById));
-    }
+
+    const category = await Category.getCategoryById(adData.categoryId);
+    newAd.category = category;
+
+    // Promise.all will call each function in array passed as argument and resolve when all are resolved
+    newAd.tags = await Promise.all(adData.tagIds.map(Tag.getTagById));
+
     const savedAd = await newAd.save();
-    console.log(`New ad saved: ${savedAd.getStringRepresentation()}.`);
     return savedAd;
   }
 
@@ -95,6 +99,7 @@ class Ad extends BaseEntity {
     const ads = await Ad.find({
       where: { category: { id: categoryId } },
       order: { createdAt: "DESC" },
+      take: 20,
     });
     return ads;
   }
@@ -129,6 +134,26 @@ class Ad extends BaseEntity {
     await ad.save();
     ad.reload();
     return ad;
+  }
+
+  static async searchAds(query: string): Promise<Ad[]> {
+    const cache = await getCache();
+
+    const cachedResult = await cache.get(query);
+    if (cachedResult) {
+      return JSON.parse(cachedResult);
+    }
+
+    const databaseResult = await Ad.find({
+      where: [
+        { title: ILike(`%${query}%`) },
+        { description: ILike(`%${query}%`) },
+      ],
+    });
+
+    cache.set(query, JSON.stringify(databaseResult), { EX: 600 });
+
+    return databaseResult;
   }
 
   getStringRepresentation(): string {

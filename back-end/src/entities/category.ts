@@ -35,22 +35,19 @@ class Category extends BaseEntity {
   }
 
   static async saveNewCategoryIfNotExisting(
-    categoryData: Partial<Category>
+    categoryData: Partial<Category>,
   ): Promise<Category> {
     if (!categoryData.name) {
       throw new Error("Category name cannot be empty.");
     }
     const existingCategory = await Category.getCategoryByName(
-      categoryData.name
+      categoryData.name,
     );
     if (existingCategory) {
       return existingCategory;
     }
     const newCategory = new Category(categoryData);
     const savedCategory = await newCategory.save();
-    console.log(
-      `New category saved: ${savedCategory.getStringRepresentation()}.`
-    );
     return savedCategory;
   }
 
@@ -88,7 +85,7 @@ class Category extends BaseEntity {
   }
 
   private static async getCategoryByName(
-    name: string
+    name: string,
   ): Promise<Category | null> {
     const category = await Category.findOneBy({ name });
     return category;

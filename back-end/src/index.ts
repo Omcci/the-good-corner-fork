@@ -11,7 +11,9 @@ import { AdResolver } from "./resolvers/AdResolver";
 import { TagResolver } from "./resolvers/TagResolver";
 import { UserResolver } from "./resolvers/UserResolver";
 import { getUserSessionIdFromCookie } from "./utils/cookie";
-import { getDataSource } from "./database";
+import { getDataSource } from "./database/database";
+import { createFakeData } from "./fixtures";
+import { getCache } from "./cache";
 
 export type Context = { res: Response; user: User | null };
 
@@ -41,6 +43,12 @@ const startApolloServer = async () => {
 
   await getDataSource();
   await Category.initializeCategories();
+
+  if (process.env.NODE_ENV === "dev") {
+    await createFakeData();
+  }
+
+  await getCache();
 
   console.log(`🚀  Server ready at: ${url}`);
 };

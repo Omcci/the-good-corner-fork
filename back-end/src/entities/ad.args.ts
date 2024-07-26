@@ -7,12 +7,16 @@ export class CreateOrUpdateAd {
   @MinLength(2)
   title!: string;
 
-  @Field({ nullable: true })
+  @Field()
   description!: string;
 
   @Field(() => Float)
   @Min(0)
   price!: number;
+
+  @Field(() => Int)
+  @Min(0)
+  weightGrams!: number;
 
   @Field({ nullable: true })
   picture!: string;
@@ -23,6 +27,6 @@ export class CreateOrUpdateAd {
   @Field(() => Int)
   categoryId!: number;
 
-  @Field(() => [String], { nullable: true })
+  @Field(() => [String])
   tagIds!: string[];
 }

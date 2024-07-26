@@ -17,27 +17,28 @@ import {
 import { gql, useMutation, useQuery } from "@apollo/client";
 import { useRouter } from "next/router";
 import React, { useState } from "react";
-import { readAndCompressImage } from "browser-image-resizer";
 
 const CREATE_AD_FORM = gql`
   mutation CreateAdForm(
     $title: String!
+    $description: String!
     $price: Float!
     $categoryId: Int!
-    $description: String!
+    $tagIds: [String!]!
   ) {
     createAd(
       title: $title
+      description: $description
       price: $price
       categoryId: $categoryId
-      description: $description
+      tagIds: $tagIds
     ) {
       id
     }
   }
 `;
 
-const GET_MY_PROFILE_PUBLISH_ARTICLE = gql`
+export const GET_MY_PROFILE_PUBLISH_ARTICLE = gql`
   query GetMyProfilePublishArticle {
     myProfile {
       id
@@ -56,11 +57,12 @@ export default function PublishArticlePage() {
     price: 0,
     description: "",
     categoryId: 1,
+    tagIds: [],
   });
   const router = useRouter();
 
   const updateFormData = (
-    partialFormData: Partial<CreateAdFormMutationVariables>
+    partialFormData: Partial<CreateAdFormMutationVariables>,
   ) => {
     setFormData({ ...formData, ...partialFormData });
   };
@@ -71,7 +73,7 @@ export default function PublishArticlePage() {
   >(CREATE_AD_FORM);
 
   const uploadImage = async (id: string) => {
-    console.log({ fileInForm });
+    const { readAndCompressImage } = await import("browser-image-resizer");
     if (fileInForm) {
       const resizedJpgFile = await readAndCompressImage(fileInForm, {
         quality: 0.75,
@@ -89,10 +91,8 @@ export default function PublishArticlePage() {
   const createArticle = async () => {
     const { data } = await createAdMutation({
       variables: {
-        title: formData.title,
+        ...formData,
         price: formData.price as number,
-        categoryId: formData.categoryId,
-        description: formData.description,
       },
     });
 
@@ -109,6 +109,8 @@ export default function PublishArticlePage() {
     <NarrowPageContainer>
       <MainContentTitle>Publier une annonce</MainContentTitle>
       <Form
+        // TODO: add ARIA label to reusable Form component
+        aria-label="form"
         onSubmit={(event) => {
           event.preventDefault();
           createArticle();
